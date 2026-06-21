@@ -144,24 +144,49 @@
     .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
     .btn-ghost { background: transparent; color: var(--muted); font-size: 14px; width: auto; padding: 6px 12px; }
 
-    .feel-grid { display: flex; gap: 8px; }
+    .feel-grid { display: flex; flex-direction: column; gap: 8px; }
 
     .feel-btn {
-      flex: 1;
-      padding: 12px 0;
+      width: 100%;
+      padding: 12px 16px;
       border: 1px solid var(--border);
       border-radius: 8px;
       background: var(--surface);
-      font-size: 20px;
       cursor: pointer;
-      text-align: center;
+      text-align: left;
       transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    .feel-btn.selected {
-      border-color: var(--accent);
-      background: rgba(214, 40, 57, 0.15);
+    .feel-btn .feel-score {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      flex-shrink: 0;
     }
+
+    .feel-btn .feel-text { display: flex; flex-direction: column; }
+    .feel-btn .feel-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .feel-btn .feel-desc { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    .feel-btn[data-val="1"] .feel-score { background: rgba(220,53,69,0.2); color: #dc3545; }
+    .feel-btn[data-val="2"] .feel-score { background: rgba(255,140,0,0.2); color: #ff8c00; }
+    .feel-btn[data-val="3"] .feel-score { background: rgba(255,200,0,0.2); color: #c8a000; }
+    .feel-btn[data-val="4"] .feel-score { background: rgba(32,178,170,0.2); color: #20b2aa; }
+    .feel-btn[data-val="5"] .feel-score { background: rgba(63,185,80,0.2); color: var(--green); }
+
+    .feel-btn.selected[data-val="1"] { border-color: #dc3545; background: rgba(220,53,69,0.08); }
+    .feel-btn.selected[data-val="2"] { border-color: #ff8c00; background: rgba(255,140,0,0.08); }
+    .feel-btn.selected[data-val="3"] { border-color: #c8a000; background: rgba(255,200,0,0.08); }
+    .feel-btn.selected[data-val="4"] { border-color: #20b2aa; background: rgba(32,178,170,0.08); }
+    .feel-btn.selected[data-val="5"] { border-color: var(--green); background: rgba(63,185,80,0.08); }
 
     .distance-row {
       display: grid;
@@ -463,11 +488,26 @@
     <div class="card">
       <div class="card-title">How did your arm feel?</div>
       <div class="feel-grid" id="feel-grid">
-        <button class="feel-btn" data-val="1" onclick="selectFeel(1)">😣</button>
-        <button class="feel-btn" data-val="2" onclick="selectFeel(2)">😕</button>
-        <button class="feel-btn" data-val="3" onclick="selectFeel(3)">😐</button>
-        <button class="feel-btn" data-val="4" onclick="selectFeel(4)">🙂</button>
-        <button class="feel-btn" data-val="5" onclick="selectFeel(5)">💪</button>
+        <button class="feel-btn" data-val="5" onclick="selectFeel(5)">
+          <div class="feel-score">5</div>
+          <div class="feel-text"><div class="feel-label">Fresh / Strong</div><div class="feel-desc">No discomfort, full velocity, ready to throw</div></div>
+        </button>
+        <button class="feel-btn" data-val="4" onclick="selectFeel(4)">
+          <div class="feel-score">4</div>
+          <div class="feel-text"><div class="feel-label">Slight Fatigue</div><div class="feel-desc">Minor tiredness, full range of motion</div></div>
+        </button>
+        <button class="feel-btn" data-val="3" onclick="selectFeel(3)">
+          <div class="feel-score">3</div>
+          <div class="feel-text"><div class="feel-label">Mild Soreness</div><div class="feel-desc">Normal muscle fatigue, no sharp pain</div></div>
+        </button>
+        <button class="feel-btn" data-val="2" onclick="selectFeel(2)">
+          <div class="feel-score">2</div>
+          <div class="feel-text"><div class="feel-label">Heavy / Tight</div><div class="feel-desc">Arm feels loaded, limited range or stiffness</div></div>
+        </button>
+        <button class="feel-btn" data-val="1" onclick="selectFeel(1)">
+          <div class="feel-score">1</div>
+          <div class="feel-text"><div class="feel-label">Pain / Concern</div><div class="feel-desc">Sharp or significant discomfort — tell your coach</div></div>
+        </button>
       </div>
     </div>
 
@@ -806,24 +846,28 @@ async function loadHistory() {
     return;
   }
 
-  const feelEmoji = ['', '😣', '😕', '😐', '🙂', '💪'];
+  const feelColor = ['', '#dc3545', '#ff8c00', '#c8a000', '#20b2aa', '#3fb950'];
+  const feelLabel = ['', 'Pain / Concern', 'Heavy / Tight', 'Mild Soreness', 'Slight Fatigue', 'Fresh / Strong'];
 
   el.innerHTML = sessions.map(s => {
     const totalThrows = s.throws?.reduce((a, t) => a + t.reps, 0) || 0;
     const distances = [...new Set(s.throws?.map(t => `${t.distance}ft`))].join(' · ') || '—';
     const maxVelo = s.throws?.map(t => t.velocity).filter(Boolean).sort((a, b) => b - a)[0];
     const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const color = feelColor[s.arm_feel] || 'var(--border)';
+    const label = feelLabel[s.arm_feel] || '';
 
     return `
-      <div class="session-item" id="session-${s.id}">
+      <div class="session-item" id="session-${s.id}" style="border-left: 4px solid ${color};">
         <div>
           <div class="session-date">Day ${s.program_day} — ${dateStr}</div>
           <div class="session-meta">${distances}</div>
           <div class="session-meta">${totalThrows} throws${maxVelo ? ` · Top ${maxVelo} mph` : ''}</div>
-          ${s.notes ? `<div class="session-meta" style="font-style:italic;margin-top:4px;">"${s.notes}"</div>` : ''}
+          ${label ? `<div class="session-meta" style="color:${color};font-weight:600;margin-top:4px;">Arm: ${label}</div>` : ''}
+          ${s.notes ? `<div class="session-meta" style="font-style:italic;margin-top:2px;">"${s.notes}"</div>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
-          <div class="session-feel">${feelEmoji[s.arm_feel] || ''}</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:${color}22;color:${color};font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;">${s.arm_feel}</div>
           <button onclick="deleteSession('${s.id}')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0;">Delete</button>
         </div>
       </div>
