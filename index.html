@@ -359,6 +359,60 @@
     .role-coach { color: #f0a500; font-weight: 700; font-size: 12px; }
     .role-player { color: #20b2aa; font-weight: 700; font-size: 12px; }
 
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 50;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px 40px;
+      width: 100%;
+      max-width: 430px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .program-name-badge {
+      display: inline-block;
+      background: rgba(26,115,232,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(26,115,232,0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .file-drop:hover { border-color: var(--accent); }
+    .file-drop .icon { font-size: 32px; margin-bottom: 8px; }
+    .file-drop .label { font-size: 14px; color: var(--muted); }
+    .file-drop .sublabel { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
     .player-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -501,7 +555,41 @@
 <div id="app" style="display:none;">
   <div class="header">
     <div class="logo">Arm<span>Forge</span></div>
-    <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-ghost" onclick="openProgramModal()" style="padding:6px 10px;" title="Program Settings">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;color:var(--muted);"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a6.97 6.97 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      </button>
+      <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Program Settings Modal -->
+  <div class="modal-overlay" id="program-modal" onclick="closeProgramModal(event)">
+    <div class="modal">
+      <div class="modal-title">Throwing Program</div>
+      <div id="current-program-badge" class="program-name-badge">Default Program</div>
+
+      <div class="file-drop" onclick="document.getElementById('csv-input').click()">
+        <div class="icon">📂</div>
+        <div class="label">Tap to import a program</div>
+        <div class="sublabel">CSV file — day, phase, distance_ft, reps</div>
+      </div>
+      <input type="file" id="csv-input" accept=".csv" style="display:none;" onchange="importProgram(event)">
+
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title">CSV Format Example</div>
+        <div style="font-family:monospace;font-size:12px;color:var(--muted);line-height:1.8;">
+          day,phase,distance_ft,reps<br>
+          1,Phase 1,45,25<br>
+          2,Phase 1,45,25<br>
+          3,Phase 1 - Two distances,45,10<br>
+          3,Phase 1 - Two distances,60,15
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="resetToDefaultProgram()" style="margin-bottom:10px;">Reset to Default Program</button>
+      <button class="btn btn-ghost" onclick="closeProgramModal()" style="width:100%;padding:12px;">Close</button>
+    </div>
   </div>
 
   <!-- Home -->
@@ -683,7 +771,7 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Standard 20-day interval throwing program
-const PROGRAM = [
+const DEFAULT_PROGRAM = [
   { day: 1,  phase: 'Phase 1 — Short Toss',   distances: [{ft: 45,  reps: 25}] },
   { day: 2,  phase: 'Phase 1 — Short Toss',   distances: [{ft: 45,  reps: 25}] },
   { day: 3,  phase: 'Phase 1 — Short Toss',   distances: [{ft: 60,  reps: 25}] },
@@ -705,6 +793,71 @@ const PROGRAM = [
   { day: 19, phase: 'Phase 5 — Max Distance', distances: [{ft: 150, reps: 10}, {ft: 200, reps: 20}] },
   { day: 20, phase: 'Phase 5 — Return to Play', distances: [{ft: 60, reps: 10}, {ft: 90, reps: 10}, {ft: 120, reps: 10}, {ft: 60, reps: 10}] },
 ];
+
+// Load custom program from localStorage or fall back to default
+function getProgram() {
+  const saved = localStorage.getItem('armforge_program');
+  return saved ? JSON.parse(saved) : DEFAULT_PROGRAM;
+}
+
+function getProgramName() {
+  return localStorage.getItem('armforge_program_name') || 'Default Program';
+}
+
+// ── Program Import ────────────────────────────────────
+
+function openProgramModal() {
+  document.getElementById('current-program-badge').textContent = getProgramName();
+  document.getElementById('program-modal').classList.add('open');
+}
+
+function closeProgramModal(e) {
+  if (!e || e.target === document.getElementById('program-modal')) {
+    document.getElementById('program-modal').classList.remove('open');
+  }
+}
+
+function importProgram(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const lines = e.target.result.trim().split('\n').slice(1); // skip header
+    const map = {};
+
+    for (const line of lines) {
+      const [day, phase, ft, reps] = line.split(',').map(s => s.trim());
+      const d = parseInt(day), f = parseInt(ft), r = parseInt(reps);
+      if (!d || !f || !r) continue;
+      if (!map[d]) map[d] = { day: d, phase: phase || `Day ${d}`, distances: [] };
+      map[d].distances.push({ ft: f, reps: r });
+    }
+
+    const program = Object.values(map).sort((a, b) => a.day - b.day);
+    if (program.length === 0) { showToast('No valid data found in file', false); return; }
+
+    const name = file.name.replace('.csv', '');
+    localStorage.setItem('armforge_program', JSON.stringify(program));
+    localStorage.setItem('armforge_program_name', name);
+
+    document.getElementById('current-program-badge').textContent = name;
+    showToast(`Loaded: ${name}`, true);
+    loadDashboard();
+    event.target.value = '';
+  };
+
+  reader.readAsText(file);
+}
+
+function resetToDefaultProgram() {
+  localStorage.removeItem('armforge_program');
+  localStorage.removeItem('armforge_program_name');
+  document.getElementById('current-program-badge').textContent = 'Default Program';
+  showToast('Reset to default program', true);
+  loadDashboard();
+  closeProgramModal();
+}
 
 let currentUser = null;
 let selectedFeel = null;
@@ -792,18 +945,19 @@ async function loadDashboard() {
     const now = new Date();
     const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const diffDays = Math.round((todayLocal - firstDate) / (1000 * 60 * 60 * 24));
-    currentDayIndex = Math.min(diffDays, PROGRAM.length - 1);
+    currentDayIndex = Math.min(diffDays, getProgram().length - 1);
   }
 
-  const programDay = PROGRAM[currentDayIndex];
+  const program = getProgram();
+  const programDay = program[currentDayIndex];
 
   document.getElementById('stat-day').textContent = currentDayIndex + 1;
   document.getElementById('stat-sessions').textContent = count;
   document.getElementById('today-phase').textContent = programDay.phase;
 
-  const pct = Math.round(((currentDayIndex + 1) / PROGRAM.length) * 100);
+  const pct = Math.round(((currentDayIndex + 1) / program.length) * 100);
   document.getElementById('program-progress').style.width = pct + '%';
-  document.getElementById('progress-label').textContent = `Day ${currentDayIndex + 1} of ${PROGRAM.length}`;
+  document.getElementById('progress-label').textContent = `Day ${currentDayIndex + 1} of ${program.length}`;
 
   // Consistency tracker
   const { data: recentSessions } = await db
@@ -869,7 +1023,7 @@ async function loadDashboard() {
   }
 
   const distEl = document.getElementById('today-distances');
-  if (count >= PROGRAM.length) {
+  if (count >= program.length) {
     distEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">🎉 Program complete! Great work.</div>';
   } else {
     distEl.innerHTML = programDay.distances.map(d => `
@@ -889,8 +1043,9 @@ function goToLog() {
   switchView('log');
   resetLogForm();
 
+  const program = getProgram();
   const dayIndex = Math.max(0, parseInt(document.getElementById('stat-day').textContent) - 1);
-  const programDay = PROGRAM[Math.min(dayIndex, PROGRAM.length - 1)];
+  const programDay = program[Math.min(dayIndex, program.length - 1)];
   programDay.distances.forEach(d => addThrowRow(d.ft, d.reps));
 }
 
