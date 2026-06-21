@@ -825,6 +825,14 @@ const SUPABASE_ANON_KEY = 'sb_publishable_KsnefjFUAhX7hMYmJ9AaiQ_M8DilztX';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.schedule-bullpen-btn');
+  if (btn) {
+    e.stopPropagation();
+    openBullpenModal(btn.dataset.playerId, btn.dataset.playerName);
+  }
+});
+
 // Standard 20-day interval throwing program
 const DEFAULT_PROGRAM = [
   { day: 1,  phase: 'Phase 1 — Short Toss',   distances: [{ft: 45,  reps: 25}] },
@@ -1598,7 +1606,7 @@ async function loadCoachDashboard(members) {
           ${sessionRows || '<div class="text-muted" style="padding:8px 0;">No sessions logged yet.</div>'}
         </div>
         <div style="padding:10px 0 4px;">
-          <button class="btn" style="width:100%;font-size:13px;padding:8px 14px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);" onclick="event.stopPropagation();openBullpenModal('${p.user_id}','${(p.name||'Player').replace(/'/g,"\\'")}')">+ Schedule Bullpen</button>
+          <button class="btn schedule-bullpen-btn" data-player-id="${p.user_id}" data-player-name="${(p.name||'Player').replace(/"/g,'&quot;')}" style="width:100%;font-size:13px;padding:8px 14px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">+ Schedule Bullpen</button>
         </div>
       </div>
     `;
