@@ -776,6 +776,7 @@ async function saveSession() {
   await db.from('throws').insert(throwInserts);
 
   showToast('Session saved! 💪', true);
+  resetLogForm();
   await loadDashboard();
   setTimeout(() => switchView('home'), 900);
 }
@@ -805,17 +806,29 @@ async function loadHistory() {
     const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
     return `
-      <div class="session-item">
+      <div class="session-item" id="session-${s.id}">
         <div>
           <div class="session-date">Day ${s.program_day} — ${dateStr}</div>
           <div class="session-meta">${distances}</div>
           <div class="session-meta">${totalThrows} throws${maxVelo ? ` · Top ${maxVelo} mph` : ''}</div>
           ${s.notes ? `<div class="session-meta" style="font-style:italic;margin-top:4px;">"${s.notes}"</div>` : ''}
         </div>
-        <div class="session-feel">${feelEmoji[s.arm_feel] || ''}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+          <div class="session-feel">${feelEmoji[s.arm_feel] || ''}</div>
+          <button onclick="deleteSession('${s.id}')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0;">Delete</button>
+        </div>
       </div>
     `;
   }).join('');
+}
+
+async function deleteSession(id) {
+  if (!confirm('Delete this session?')) return;
+  await db.from('sessions').delete().eq('id', id);
+  document.getElementById(`session-${id}`)?.remove();
+  await loadDashboard();
+  const remaining = document.querySelectorAll('.session-item').length;
+  if (remaining === 0) loadHistory();
 }
 
 // ── Navigation ────────────────────────────────────────
