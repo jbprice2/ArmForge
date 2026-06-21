@@ -1242,20 +1242,21 @@ let _bullpenTeamId = null;
 function openBullpenModal(playerId, playerName) {
   _bullpenPlayerId = playerId;
   const modal = document.getElementById('bullpen-modal');
+  if (!modal) return;
   const title = document.getElementById('bullpen-modal-title');
   const dateEl = document.getElementById('bullpen-date');
   const typeEl = document.getElementById('bullpen-type');
   const notesEl = document.getElementById('bullpen-notes');
-  if (!modal) { alert('modal not found'); return; }
-  if (title) title.textContent = `Schedule Bullpen — ${playerName}`;
+  if (title) title.textContent = 'Schedule Bullpen — ' + playerName;
   if (dateEl) dateEl.value = localDateString();
   if (typeEl) typeEl.value = 'High Intent';
   if (notesEl) notesEl.value = '';
-  modal.classList.add('open');
+  modal.style.display = 'flex';
 }
 
 function closeBullpenModal() {
-  document.getElementById('bullpen-modal').classList.remove('open');
+  const modal = document.getElementById('bullpen-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 async function saveBullpen() {
