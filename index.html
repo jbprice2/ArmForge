@@ -308,6 +308,54 @@
     }
 
     .col-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .consistency-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pace-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .pace-badge.on-pace { background: rgba(63, 185, 80, 0.15); color: var(--green); border: 1px solid rgba(63, 185, 80, 0.3); }
+    .pace-badge.behind  { background: rgba(255, 165, 0, 0.15); color: #f0a500; border: 1px solid rgba(255, 165, 0, 0.3); }
+    .pace-badge.no-data { background: rgba(139, 148, 158, 0.15); color: var(--muted); border: 1px solid var(--border); }
+
+    .consistency-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .dot.threw { background: var(--accent); color: white; }
+    .dot.rest  { background: var(--border); color: var(--muted); }
+    .dot-label { font-size: 9px; color: var(--muted); text-align: center; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -367,6 +415,21 @@
         <div class="stat-value" id="stat-sessions">—</div>
         <div class="stat-label">Sessions Done</div>
       </div>
+    </div>
+
+    <div class="consistency-card">
+      <div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">This week</div>
+        <div style="font-size:22px;font-weight:800;" id="stat-week">— <span style="font-size:14px;font-weight:400;color:var(--muted);">sessions</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="stat-last-threw"></div>
+      </div>
+      <div id="pace-badge"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">Last 7 Days</div>
+      <div class="consistency-dots" id="consistency-dots"></div>
+      <div style="display:flex;gap:6px;margin-top:6px;" id="consistency-labels"></div>
     </div>
 
     <div class="card">
@@ -558,6 +621,69 @@ async function loadDashboard() {
   const pct = Math.round((count / PROGRAM.length) * 100);
   document.getElementById('program-progress').style.width = pct + '%';
   document.getElementById('progress-label').textContent = `${count} of ${PROGRAM.length} sessions complete`;
+
+  // Consistency tracker
+  const { data: recentSessions } = await db
+    .from('sessions')
+    .select('date')
+    .eq('user_id', currentUser.id)
+    .order('date', { ascending: false });
+
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+
+  const sessionsThisWeek = (recentSessions || []).filter(s => new Date(s.date + 'T12:00:00') >= startOfWeek).length;
+  document.getElementById('stat-week').innerHTML = `${sessionsThisWeek} <span style="font-size:14px;font-weight:400;color:var(--muted);">sessions</span>`;
+
+  // Last threw
+  if (recentSessions && recentSessions.length > 0) {
+    const lastDate = new Date(recentSessions[0].date + 'T12:00:00');
+    const diffDays = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+    const lastStr = diffDays === 0 ? 'Last threw: Today' : diffDays === 1 ? 'Last threw: Yesterday' : `Last threw: ${diffDays} days ago`;
+    document.getElementById('stat-last-threw').textContent = lastStr;
+  } else {
+    document.getElementById('stat-last-threw').textContent = 'No sessions yet';
+  }
+
+  // Pace badge (target: 4 sessions/week)
+  const target = 4;
+  const dayOfWeek = today.getDay(); // 0=Sun
+  const daysElapsed = dayOfWeek === 0 ? 7 : dayOfWeek;
+  const expectedByNow = Math.ceil((daysElapsed / 7) * target);
+  const badgeEl = document.getElementById('pace-badge');
+  if (!recentSessions || recentSessions.length === 0) {
+    badgeEl.innerHTML = `<span class="pace-badge no-data">⚾ Get started</span>`;
+  } else if (sessionsThisWeek >= expectedByNow) {
+    badgeEl.innerHTML = `<span class="pace-badge on-pace">✓ On pace</span>`;
+  } else {
+    badgeEl.innerHTML = `<span class="pace-badge behind">↑ Pick it up</span>`;
+  }
+
+  // Last 7 days dots
+  const sessionDates = new Set((recentSessions || []).map(s => s.date));
+  const dotsEl = document.getElementById('consistency-dots');
+  const labelsEl = document.getElementById('consistency-labels');
+  dotsEl.innerHTML = '';
+  labelsEl.innerHTML = '';
+  const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const threw = sessionDates.has(dateStr);
+    const isToday = i === 0;
+    const dot = document.createElement('div');
+    dot.style.display = 'flex';
+    dot.style.flexDirection = 'column';
+    dot.style.alignItems = 'center';
+    dot.style.flex = '1';
+    dot.innerHTML = `
+      <div class="dot ${threw ? 'threw' : 'rest'}">${threw ? '✓' : ''}</div>
+      <div class="dot-label" style="${isToday ? 'color:var(--accent);font-weight:700;' : ''}">${dayNames[d.getDay()]}</div>
+    `;
+    dotsEl.appendChild(dot);
+  }
 
   const distEl = document.getElementById('today-distances');
   if (count >= PROGRAM.length) {
