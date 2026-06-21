@@ -1596,7 +1596,9 @@ async function loadCoachDashboard(members) {
         </div>
         <div class="player-sessions" id="player-${p.user_id}">
           ${sessionRows || '<div class="text-muted" style="padding:8px 0;">No sessions logged yet.</div>'}
-          <button class="btn" style="margin-top:10px;font-size:13px;padding:8px 14px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);" onclick="openBullpenModal('${p.user_id}','${(p.name||'Player').replace(/'/g,"\\'")}')">+ Schedule Bullpen</button>
+        </div>
+        <div style="padding:10px 0 4px;">
+          <button class="btn" style="width:100%;font-size:13px;padding:8px 14px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);" onclick="event.stopPropagation();openBullpenModal('${p.user_id}','${(p.name||'Player').replace(/'/g,"\\'")}')">+ Schedule Bullpen</button>
         </div>
       </div>
     `;
