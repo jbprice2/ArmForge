@@ -1166,13 +1166,15 @@ async function loadCoachDashboard(members) {
     const sessionRows = (sessions || []).slice(0, 10).map(s => {
       const distances = [...new Set(s.throws?.map(t => `${t.distance}ft`))].join(', ') || '—';
       const totalThrows = s.throws?.reduce((a, t) => a + t.reps, 0) || 0;
+      const maxVelo = s.throws?.map(t => t.velocity).filter(Boolean).sort((a, b) => b - a)[0];
       const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const sc = feelColor[s.arm_feel] || 'var(--muted)';
       return `
         <div class="mini-session" style="border-left: 3px solid ${sc}; padding-left: 10px;">
           <div class="mini-session-left">
             <strong>Day ${s.program_day} — ${dateStr}</strong>
-            ${distances} · ${totalThrows} throws
+            ${distances} · ${totalThrows} throws${maxVelo ? ` · <span style="color:#20b2aa;">⚡ ${maxVelo} mph</span>` : ''}
+            ${s.notes ? `<div style="font-style:italic;margin-top:2px;color:var(--muted);">"${s.notes}"</div>` : ''}
           </div>
           <div style="font-size:13px;font-weight:700;color:${sc};">${feelLabel[s.arm_feel] || ''}</div>
         </div>
