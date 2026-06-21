@@ -564,7 +564,7 @@
   </div>
 
   <!-- Bullpen Scheduling Modal -->
-  <div class="modal-overlay" id="bullpen-modal" style="display:none;" onclick="if(event.target===this)closeBullpenModal()">
+  <div class="modal-overlay" id="bullpen-modal" onclick="if(event.target===this)closeBullpenModal()">
     <div class="modal">
       <div class="modal-title" id="bullpen-modal-title">Schedule Bullpen</div>
       <label class="form-label" style="margin-top:4px;">Date</label>
@@ -1237,11 +1237,11 @@ function openBullpenModal(playerId, playerName) {
   document.getElementById('bullpen-date').value = localDateString();
   document.getElementById('bullpen-type').value = 'High Intent';
   document.getElementById('bullpen-notes').value = '';
-  document.getElementById('bullpen-modal').style.display = 'flex';
+  document.getElementById('bullpen-modal').classList.add('open');
 }
 
 function closeBullpenModal() {
-  document.getElementById('bullpen-modal').style.display = 'none';
+  document.getElementById('bullpen-modal').classList.remove('open');
 }
 
 async function saveBullpen() {
