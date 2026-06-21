@@ -829,7 +829,6 @@ document.addEventListener('click', function(e) {
   const btn = e.target.closest('.schedule-bullpen-btn');
   if (btn) {
     e.stopPropagation();
-    alert('button clicked: ' + btn.dataset.playerId);
     openBullpenModal(btn.dataset.playerId, btn.dataset.playerName);
   }
 });
@@ -1242,11 +1241,17 @@ let _bullpenTeamId = null;
 
 function openBullpenModal(playerId, playerName) {
   _bullpenPlayerId = playerId;
-  document.getElementById('bullpen-modal-title').textContent = `Schedule Bullpen — ${playerName}`;
-  document.getElementById('bullpen-date').value = localDateString();
-  document.getElementById('bullpen-type').value = 'High Intent';
-  document.getElementById('bullpen-notes').value = '';
-  document.getElementById('bullpen-modal').classList.add('open');
+  const modal = document.getElementById('bullpen-modal');
+  const title = document.getElementById('bullpen-modal-title');
+  const dateEl = document.getElementById('bullpen-date');
+  const typeEl = document.getElementById('bullpen-type');
+  const notesEl = document.getElementById('bullpen-notes');
+  if (!modal) { alert('modal not found'); return; }
+  if (title) title.textContent = `Schedule Bullpen — ${playerName}`;
+  if (dateEl) dateEl.value = localDateString();
+  if (typeEl) typeEl.value = 'High Intent';
+  if (notesEl) notesEl.value = '';
+  modal.classList.add('open');
 }
 
 function closeBullpenModal() {
