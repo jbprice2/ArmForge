@@ -356,6 +356,8 @@
     .member-name { font-weight: 600; font-size: 15px; }
     .member-role { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .role-badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; background: rgba(26,115,232,0.15); color: var(--accent); }
+    .role-coach { color: #f0a500; font-weight: 700; font-size: 12px; }
+    .role-player { color: #20b2aa; font-weight: 700; font-size: 12px; }
 
     .player-card {
       background: var(--card);
@@ -1097,7 +1099,9 @@ async function loadTeam() {
   document.getElementById('has-team').style.display = 'block';
   document.getElementById('team-name-display').textContent = team.name;
   document.getElementById('team-code-display').textContent = team.join_code;
-  document.getElementById('team-role-display').textContent = isCoach ? 'You are the coach' : 'Player';
+  document.getElementById('team-role-display').innerHTML = isCoach
+    ? '<span class="role-coach">⚡ Coach</span>'
+    : '<span class="role-player">⚾ Player</span>';
 
   const { data: members } = await db
     .from('team_members')
@@ -1119,9 +1123,9 @@ async function loadTeam() {
         <div class="member-item">
           <div>
             <div class="member-name">${m.name || 'Unknown'}${isYou ? ' <span style="color:var(--muted);font-weight:400;font-size:13px;">(you)</span>' : ''}</div>
-            <div class="member-role">${m.role}</div>
+            <div class="${m.role === 'coach' ? 'role-coach' : 'role-player'}">${m.role === 'coach' ? 'Coach' : 'Player'}</div>
           </div>
-          ${m.role === 'coach' ? '<span class="role-badge">Coach</span>' : ''}
+          ${m.role === 'coach' ? '<span class="role-badge" style="background:rgba(240,165,0,0.15);color:#f0a500;border:1px solid rgba(240,165,0,0.3);">Coach</span>' : ''}
         </div>
       `;
     }).join('');
