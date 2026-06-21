@@ -607,20 +607,31 @@ async function initApp() {
 async function loadDashboard() {
   const { data: sessions } = await db
     .from('sessions')
-    .select('id')
-    .eq('user_id', currentUser.id);
+    .select('id, date')
+    .eq('user_id', currentUser.id)
+    .order('date', { ascending: true });
 
   const count = sessions?.length || 0;
-  const nextDayIndex = Math.min(count, PROGRAM.length - 1);
-  const programDay = PROGRAM[nextDayIndex];
 
-  document.getElementById('stat-day').textContent = nextDayIndex + 1;
+  // Program day based on calendar days since first session
+  let currentDayIndex = 0;
+  if (sessions && sessions.length > 0) {
+    const firstDate = new Date(sessions[0].date + 'T12:00:00');
+    const now = new Date();
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.round((todayLocal - firstDate) / (1000 * 60 * 60 * 24));
+    currentDayIndex = Math.min(diffDays, PROGRAM.length - 1);
+  }
+
+  const programDay = PROGRAM[currentDayIndex];
+
+  document.getElementById('stat-day').textContent = currentDayIndex + 1;
   document.getElementById('stat-sessions').textContent = count;
   document.getElementById('today-phase').textContent = programDay.phase;
 
-  const pct = Math.round((count / PROGRAM.length) * 100);
+  const pct = Math.round(((currentDayIndex + 1) / PROGRAM.length) * 100);
   document.getElementById('program-progress').style.width = pct + '%';
-  document.getElementById('progress-label').textContent = `${count} of ${PROGRAM.length} sessions complete`;
+  document.getElementById('progress-label').textContent = `Day ${currentDayIndex + 1} of ${PROGRAM.length}`;
 
   // Consistency tracker
   const { data: recentSessions } = await db
@@ -706,9 +717,8 @@ function goToLog() {
   switchView('log');
   resetLogForm();
 
-  const count = parseInt(document.getElementById('stat-sessions').textContent) || 0;
-  const nextDayIndex = Math.min(count, PROGRAM.length - 1);
-  const programDay = PROGRAM[nextDayIndex];
+  const dayIndex = Math.max(0, parseInt(document.getElementById('stat-day').textContent) - 1);
+  const programDay = PROGRAM[Math.min(dayIndex, PROGRAM.length - 1)];
   programDay.distances.forEach(d => addThrowRow(d.ft, d.reps));
 }
 
@@ -759,8 +769,7 @@ async function saveSession() {
   if (throws.length === 0) { showToast('Add at least one distance', false); return; }
   if (!selectedFeel) { showToast('Rate how your arm felt', false); return; }
 
-  const count = parseInt(document.getElementById('stat-sessions').textContent) || 0;
-  const programDay = Math.min(count + 1, PROGRAM.length);
+  const programDay = parseInt(document.getElementById('stat-day').textContent) || 1;
 
   const { data: session, error } = await db.from('sessions').insert({
     user_id: currentUser.id,
