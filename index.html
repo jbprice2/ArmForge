@@ -563,6 +563,29 @@
     </div>
   </div>
 
+  <!-- Bullpen Scheduling Modal -->
+  <div class="modal-overlay" id="bullpen-modal" style="display:none;" onclick="if(event.target===this)closeBullpenModal()">
+    <div class="modal">
+      <div class="modal-title" id="bullpen-modal-title">Schedule Bullpen</div>
+      <label class="form-label" style="margin-top:4px;">Date</label>
+      <input type="date" id="bullpen-date" class="input" style="margin-bottom:14px;">
+      <label class="form-label">Bullpen Type</label>
+      <select id="bullpen-type" class="input" style="margin-bottom:14px;">
+        <option>High Intent</option>
+        <option>Location / Spot Pen</option>
+        <option>Simulated Game</option>
+        <option>Velocity Day</option>
+        <option>Breaking Ball Focus</option>
+      </select>
+      <label class="form-label">Notes (optional)</label>
+      <textarea id="bullpen-notes" class="input" rows="3" placeholder="e.g. Focus on 2-seam command..." style="margin-bottom:18px;resize:none;"></textarea>
+      <div style="display:flex;gap:10px;">
+        <button class="btn" style="flex:1;background:var(--surface);color:var(--muted);border:1px solid var(--border);" onclick="closeBullpenModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="saveBullpen()">Schedule</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Program Settings Modal -->
   <div class="modal-overlay" id="program-modal" onclick="closeProgramModal(event)">
     <div class="modal" style="max-height:90vh;overflow-y:auto;">
@@ -638,6 +661,8 @@
       </div>
       <div class="text-muted" id="progress-label" style="font-size:12px;margin-top:8px;"></div>
     </div>
+
+    <div id="upcoming-bullpen" style="display:none;margin-bottom:16px;"></div>
 
     <button class="btn btn-primary" onclick="goToLog()">Log Today's Session</button>
 
@@ -1170,6 +1195,80 @@ async function loadDashboard() {
       </div>
     `).join('');
   }
+  await loadUpcomingBullpen();
+}
+
+// ── Bullpen Scheduling ────────────────────────────────
+
+async function loadUpcomingBullpen() {
+  const el = document.getElementById('upcoming-bullpen');
+  if (!el) return;
+  const today = localDateString();
+  const { data } = await db
+    .from('bullpens')
+    .select('*')
+    .eq('player_id', currentUser.id)
+    .gte('date', today)
+    .order('date', { ascending: true })
+    .limit(1);
+  const b = data?.[0];
+  if (!b) { el.style.display = 'none'; return; }
+  const dateStr = new Date(b.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="card" style="border:1px solid rgba(59,130,246,0.35);background:rgba(59,130,246,0.07);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:18px;">⚾</span>
+        <div style="font-weight:700;font-size:14px;color:#60a5fa;">Upcoming Bullpen</div>
+      </div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${b.type}</div>
+      <div style="font-size:13px;color:var(--muted);">${dateStr}</div>
+      ${b.notes ? `<div style="font-size:13px;margin-top:8px;font-style:italic;color:var(--text);">"${b.notes}"</div>` : ''}
+    </div>
+  `;
+}
+
+let _bullpenPlayerId = null;
+let _bullpenTeamId = null;
+
+function openBullpenModal(playerId, playerName) {
+  _bullpenPlayerId = playerId;
+  document.getElementById('bullpen-modal-title').textContent = `Schedule Bullpen — ${playerName}`;
+  document.getElementById('bullpen-date').value = localDateString();
+  document.getElementById('bullpen-type').value = 'High Intent';
+  document.getElementById('bullpen-notes').value = '';
+  document.getElementById('bullpen-modal').style.display = 'flex';
+}
+
+function closeBullpenModal() {
+  document.getElementById('bullpen-modal').style.display = 'none';
+}
+
+async function saveBullpen() {
+  const date = document.getElementById('bullpen-date').value;
+  const type = document.getElementById('bullpen-type').value;
+  const notes = document.getElementById('bullpen-notes').value.trim();
+  if (!date || !type) return;
+
+  const { data: tm } = await db
+    .from('team_members')
+    .select('team_id')
+    .eq('user_id', currentUser.id)
+    .limit(1)
+    .single();
+
+  const { error } = await db.from('bullpens').insert({
+    team_id: tm?.team_id,
+    player_id: _bullpenPlayerId,
+    coach_id: currentUser.id,
+    date,
+    type,
+    notes: notes || null
+  });
+
+  if (error) { alert('Error scheduling bullpen: ' + error.message); return; }
+  closeBullpenModal();
+  alert('Bullpen scheduled!');
 }
 
 // ── Log Session ───────────────────────────────────────
@@ -1497,6 +1596,7 @@ async function loadCoachDashboard(members) {
         </div>
         <div class="player-sessions" id="player-${p.user_id}">
           ${sessionRows || '<div class="text-muted" style="padding:8px 0;">No sessions logged yet.</div>'}
+          <button class="btn" style="margin-top:10px;font-size:13px;padding:8px 14px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);" onclick="openBullpenModal('${p.user_id}','${(p.name||'Player').replace(/'/g,"\\'")}')">+ Schedule Bullpen</button>
         </div>
       </div>
     `;
