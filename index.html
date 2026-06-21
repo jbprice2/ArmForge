@@ -642,7 +642,7 @@
     <button class="btn btn-primary" onclick="goToLog()">Log Today's Session</button>
 
     <div style="margin-top:12px;">
-      <button class="btn btn-secondary" onclick="toggleFullProgram()">View Full Program</button>
+      <button class="btn btn-secondary" id="toggle-program-btn" onclick="toggleFullProgram(this)">View Full Program</button>
     </div>
 
     <div id="full-program" style="display:none;margin-top:12px;">
@@ -1488,9 +1488,8 @@ function togglePlayer(userId) {
 
 // ── Full Program View ─────────────────────────────────
 
-function toggleFullProgram() {
+function toggleFullProgram(btn) {
   const el = document.getElementById('full-program');
-  const btn = event.target;
   const isOpen = el.style.display !== 'none';
 
   if (isOpen) {
@@ -1502,7 +1501,6 @@ function toggleFullProgram() {
   const program = getProgram();
   const currentDay = parseInt(document.getElementById('stat-day').textContent) || 1;
 
-  el.innerHTML = '';
   document.getElementById('full-program-list').innerHTML = program.map(p => {
     const isToday = p.day === currentDay;
     const isPast = p.day < currentDay;
