@@ -190,13 +190,13 @@
 
     .distance-row {
       display: grid;
-      grid-template-columns: 75px 1fr 1fr 36px;
-      gap: 8px;
+      grid-template-columns: 65px 1fr 1fr 1fr 30px;
+      gap: 6px;
       align-items: center;
       margin-bottom: 8px;
     }
 
-    .distance-row input { margin-bottom: 0; font-size: 15px; padding: 10px 10px; }
+    .distance-row input { margin-bottom: 0; font-size: 14px; padding: 10px 8px; }
 
     .remove-btn {
       width: 36px;
@@ -327,8 +327,8 @@
 
     .col-labels {
       display: grid;
-      grid-template-columns: 75px 1fr 1fr 36px;
-      gap: 8px;
+      grid-template-columns: 65px 1fr 1fr 1fr 30px;
+      gap: 6px;
       margin-bottom: 6px;
     }
 
@@ -652,6 +652,7 @@
         <div class="col-label">Dist (ft)</div>
         <div class="col-label">Reps</div>
         <div class="col-label">Velo (mph)</div>
+        <div class="col-label">Int (%)</div>
         <div></div>
       </div>
       <div id="throw-rows"></div>
@@ -850,14 +851,17 @@ function addBuilderDay() {
     </div>
     <label>Phase / Label</label>
     <input type="text" id="bphase-${dayNum}" placeholder="e.g. Phase 1 — Short Toss" style="margin-bottom:10px;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
-      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Distance (ft)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 28px;gap:6px;margin-bottom:6px;">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Dist (ft)</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Reps</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Int (%)</div>
+      <div></div>
     </div>
     <div id="bdists-${dayNum}">
-      <div style="display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-bottom:6px;" id="bdist-row-${distId}">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 28px;gap:6px;margin-bottom:6px;" id="bdist-row-${distId}">
         <input type="number" placeholder="45" id="bft-${distId}" inputmode="numeric" style="margin-bottom:0;">
         <input type="number" placeholder="25" id="breps-${distId}" inputmode="numeric" style="margin-bottom:0;">
+        <input type="number" placeholder="75" id="bint-${distId}" min="1" max="100" inputmode="numeric" style="margin-bottom:0;">
         <button onclick="removeBDist(${distId})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;">×</button>
       </div>
     </div>
@@ -874,10 +878,11 @@ function addBDist(dayNum) {
   const distId = ++builderDistCount;
   const row = document.createElement('div');
   row.id = `bdist-row-${distId}`;
-  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-bottom:6px;';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 28px;gap:6px;margin-bottom:6px;';
   row.innerHTML = `
     <input type="number" placeholder="45" id="bft-${distId}" inputmode="numeric" style="margin-bottom:0;">
     <input type="number" placeholder="25" id="breps-${distId}" inputmode="numeric" style="margin-bottom:0;">
+    <input type="number" placeholder="75" id="bint-${distId}" min="1" max="100" inputmode="numeric" style="margin-bottom:0;">
     <button onclick="removeBDist(${distId})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;">×</button>
   `;
   document.getElementById(`bdists-${dayNum}`).appendChild(row);
@@ -900,7 +905,8 @@ function saveBuiltProgram() {
       const distId = row.id.split('-')[2];
       const ft = parseInt(document.getElementById(`bft-${distId}`)?.value);
       const reps = parseInt(document.getElementById(`breps-${distId}`)?.value);
-      if (ft && reps) distances.push({ ft, reps });
+      const intensity = parseInt(document.getElementById(`bint-${distId}`)?.value) || null;
+      if (ft && reps) distances.push({ ft, reps, intensity });
     });
     if (distances.length > 0) program.push({ day: dayNum, phase, distances });
   });
@@ -1151,7 +1157,7 @@ function goToLog() {
   const program = getProgram();
   const dayIndex = Math.max(0, parseInt(document.getElementById('stat-day').textContent) - 1);
   const programDay = program[Math.min(dayIndex, program.length - 1)];
-  programDay.distances.forEach(d => addThrowRow(d.ft, d.reps));
+  programDay.distances.forEach(d => addThrowRow(d.ft, d.reps, '', d.intensity || ''));
 }
 
 function resetLogForm() {
@@ -1162,7 +1168,7 @@ function resetLogForm() {
   throwRowCount = 0;
 }
 
-function addThrowRow(ft = '', reps = '', velo = '') {
+function addThrowRow(ft = '', reps = '', velo = '', intensity = '') {
   throwRowCount++;
   const id = throwRowCount;
   const row = document.createElement('div');
@@ -1172,6 +1178,7 @@ function addThrowRow(ft = '', reps = '', velo = '') {
     <input type="number" placeholder="45" value="${ft}" id="ft-${id}" min="10" max="450" inputmode="numeric">
     <input type="number" placeholder="25" value="${reps}" id="reps-${id}" min="1" inputmode="numeric">
     <input type="number" placeholder="—" value="${velo}" id="velo-${id}" min="40" max="110" inputmode="numeric">
+    <input type="number" placeholder="—" value="${intensity}" id="int-${id}" min="1" max="100" inputmode="numeric">
     <button class="remove-btn" onclick="removeThrowRow(${id})">×</button>
   `;
   document.getElementById('throw-rows').appendChild(row);
@@ -1195,7 +1202,8 @@ async function saveSession() {
     const ft = parseInt(document.getElementById(`ft-${id}`)?.value);
     const reps = parseInt(document.getElementById(`reps-${id}`)?.value);
     const velo = parseInt(document.getElementById(`velo-${id}`)?.value) || null;
-    if (ft && reps) throws.push({ distance: ft, reps, velocity: velo });
+    const intensity = parseInt(document.getElementById(`int-${id}`)?.value) || null;
+    if (ft && reps) throws.push({ distance: ft, reps, velocity: velo, intensity });
   });
 
   if (throws.length === 0) { showToast('Add at least one distance', false); return; }
