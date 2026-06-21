@@ -21,8 +21,8 @@ A mobile-first web app for high school baseball players to track and log their t
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/yourusername/ArmForge.git
-cd ArmForge
+git clone https://github.com/jbprice2/armforge.git
+cd armforge
 ```
 
 ### 2. Configure Supabase
