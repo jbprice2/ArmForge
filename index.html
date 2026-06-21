@@ -1539,33 +1539,45 @@ function renderTrendChart(sessions) {
 
   const feelColor = ['', '#dc3545', '#ff8c00', '#c8a000', '#20b2aa', '#3fb950'];
   const recent = sessions.slice(0, 15).reverse();
-  const W = 340, H = 90, pad = 16;
+  const W = 340, H = 100, padL = 20, padR = 10, padT = 10, padB = 24;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
   const n = recent.length;
-  const xStep = (W - pad * 2) / Math.max(n - 1, 1);
+  const xStep = chartW / Math.max(n - 1, 1);
 
   const points = recent.map((s, i) => ({
-    x: pad + i * xStep,
-    y: pad + (H - pad * 2) * (1 - (s.arm_feel - 1) / 4),
-    feel: s.arm_feel
+    x: padL + i * xStep,
+    y: padT + chartH * (1 - (s.arm_feel - 1) / 4),
+    feel: s.arm_feel,
+    date: s.date
   }));
 
   const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
-  // Y axis grid lines for each level
   const gridLines = [1,2,3,4,5].map(v => {
-    const y = (pad + (H - pad * 2) * (1 - (v - 1) / 4)).toFixed(1);
-    return `<line x1="${pad}" y1="${y}" x2="${W - pad}" y2="${y}" stroke="var(--border)" stroke-width="1"/>
-            <text x="${pad - 4}" y="${y}" text-anchor="end" font-size="9" fill="var(--muted)" dominant-baseline="middle">${v}</text>`;
+    const y = (padT + chartH * (1 - (v - 1) / 4)).toFixed(1);
+    return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>
+            <text x="${padL - 4}" y="${y}" text-anchor="end" font-size="9" fill="var(--muted)" dominant-baseline="middle">${v}</text>`;
+  }).join('');
+
+  // X axis date labels — show every point if ≤6, otherwise every other
+  const xLabels = points.map((p, i) => {
+    if (n > 6 && i % 2 !== 0 && i !== n - 1) return '';
+    const d = new Date(p.date + 'T12:00:00');
+    const label = `${d.getMonth() + 1}/${d.getDate()}`;
+    return `<text x="${p.x.toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="var(--muted)">${label}</text>`;
   }).join('');
 
   const dots = points.map(p =>
     `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${feelColor[p.feel] || 'var(--muted)'}" stroke="var(--bg)" stroke-width="2"/>`
   ).join('');
 
+  document.getElementById('trend-chart').setAttribute('viewBox', `0 0 ${W} ${H}`);
   document.getElementById('trend-chart').innerHTML = `
     ${gridLines}
     <path d="${linePath}" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.5"/>
     ${dots}
+    ${xLabels}
   `;
 
   document.getElementById('trend-card').style.display = 'block';
