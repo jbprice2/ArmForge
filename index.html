@@ -565,30 +565,35 @@
 
   <!-- Program Settings Modal -->
   <div class="modal-overlay" id="program-modal" onclick="closeProgramModal(event)">
-    <div class="modal">
+    <div class="modal" style="max-height:90vh;overflow-y:auto;">
       <div class="modal-title">Throwing Program</div>
       <div id="current-program-badge" class="program-name-badge">Default Program</div>
 
-      <div class="file-drop" onclick="document.getElementById('csv-input').click()">
-        <div class="icon">📂</div>
-        <div class="label">Tap to import a program</div>
-        <div class="sublabel">CSV file — day, phase, distance_ft, reps</div>
-      </div>
-      <input type="file" id="csv-input" accept=".csv" style="display:none;" onchange="importProgram(event)">
-
-      <div class="card" style="margin-bottom:12px;">
-        <div class="card-title">CSV Format Example</div>
-        <div style="font-family:monospace;font-size:12px;color:var(--muted);line-height:1.8;">
-          day,phase,distance_ft,reps<br>
-          1,Phase 1,45,25<br>
-          2,Phase 1,45,25<br>
-          3,Phase 1 - Two distances,45,10<br>
-          3,Phase 1 - Two distances,60,15
+      <!-- Main options -->
+      <div id="program-main-view">
+        <div class="file-drop" onclick="document.getElementById('csv-input').click()">
+          <div class="icon">📂</div>
+          <div class="label">Import a CSV file</div>
+          <div class="sublabel">day, phase, distance_ft, reps</div>
         </div>
+        <input type="file" id="csv-input" accept=".csv" style="display:none;" onchange="importProgram(event)">
+
+        <button class="btn btn-secondary" onclick="showProgramBuilder()" style="margin-bottom:10px;">Build Program Manually</button>
+        <button class="btn btn-secondary" onclick="resetToDefaultProgram()" style="margin-bottom:10px;">Reset to Default Program</button>
+        <button class="btn btn-ghost" onclick="closeProgramModal()" style="width:100%;padding:12px;">Close</button>
       </div>
 
-      <button class="btn btn-secondary" onclick="resetToDefaultProgram()" style="margin-bottom:10px;">Reset to Default Program</button>
-      <button class="btn btn-ghost" onclick="closeProgramModal()" style="width:100%;padding:12px;">Close</button>
+      <!-- Manual builder -->
+      <div id="program-builder-view" style="display:none;">
+        <label>Program Name</label>
+        <input type="text" id="builder-name" placeholder="e.g. Spring Arm Care Program">
+
+        <div id="builder-days"></div>
+
+        <button class="btn btn-secondary" onclick="addBuilderDay()" style="margin-bottom:12px;">+ Add Day</button>
+        <button class="btn btn-primary" onclick="saveBuiltProgram()" style="margin-bottom:10px;">Save Program</button>
+        <button class="btn btn-ghost" onclick="hideProgramBuilder()" style="width:100%;padding:12px;">← Back</button>
+      </div>
     </div>
   </div>
 
@@ -809,6 +814,106 @@ function getProgramName() {
 function openProgramModal() {
   document.getElementById('current-program-badge').textContent = getProgramName();
   document.getElementById('program-modal').classList.add('open');
+  document.getElementById('program-main-view').style.display = 'block';
+  document.getElementById('program-builder-view').style.display = 'none';
+}
+
+let builderDayCount = 0;
+let builderDistCount = 0;
+
+function showProgramBuilder() {
+  document.getElementById('program-main-view').style.display = 'none';
+  document.getElementById('program-builder-view').style.display = 'block';
+  document.getElementById('builder-days').innerHTML = '';
+  document.getElementById('builder-name').value = '';
+  builderDayCount = 0;
+  builderDistCount = 0;
+  addBuilderDay();
+}
+
+function hideProgramBuilder() {
+  document.getElementById('program-main-view').style.display = 'block';
+  document.getElementById('program-builder-view').style.display = 'none';
+}
+
+function addBuilderDay() {
+  builderDayCount++;
+  const dayNum = builderDayCount;
+  const distId = ++builderDistCount;
+  const el = document.createElement('div');
+  el.id = `builder-day-${dayNum}`;
+  el.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;';
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-weight:700;color:var(--accent);">Day ${dayNum}</div>
+      <button onclick="removeBuilderDay(${dayNum})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">×</button>
+    </div>
+    <label>Phase / Label</label>
+    <input type="text" id="bphase-${dayNum}" placeholder="e.g. Phase 1 — Short Toss" style="margin-bottom:10px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Distance (ft)</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Reps</div>
+    </div>
+    <div id="bdists-${dayNum}">
+      <div style="display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-bottom:6px;" id="bdist-row-${distId}">
+        <input type="number" placeholder="45" id="bft-${distId}" inputmode="numeric" style="margin-bottom:0;">
+        <input type="number" placeholder="25" id="breps-${distId}" inputmode="numeric" style="margin-bottom:0;">
+        <button onclick="removeBDist(${distId})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;">×</button>
+      </div>
+    </div>
+    <button onclick="addBDist(${dayNum})" style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:4px 0;">+ Add distance</button>
+  `;
+  document.getElementById('builder-days').appendChild(el);
+}
+
+function removeBuilderDay(dayNum) {
+  document.getElementById(`builder-day-${dayNum}`)?.remove();
+}
+
+function addBDist(dayNum) {
+  const distId = ++builderDistCount;
+  const row = document.createElement('div');
+  row.id = `bdist-row-${distId}`;
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;margin-bottom:6px;';
+  row.innerHTML = `
+    <input type="number" placeholder="45" id="bft-${distId}" inputmode="numeric" style="margin-bottom:0;">
+    <input type="number" placeholder="25" id="breps-${distId}" inputmode="numeric" style="margin-bottom:0;">
+    <button onclick="removeBDist(${distId})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;">×</button>
+  `;
+  document.getElementById(`bdists-${dayNum}`).appendChild(row);
+}
+
+function removeBDist(distId) {
+  document.getElementById(`bdist-row-${distId}`)?.remove();
+}
+
+function saveBuiltProgram() {
+  const name = document.getElementById('builder-name').value.trim();
+  if (!name) { showToast('Enter a program name', false); return; }
+
+  const program = [];
+  document.querySelectorAll('[id^="builder-day-"]').forEach(dayEl => {
+    const dayNum = parseInt(dayEl.id.split('-')[2]);
+    const phase = document.getElementById(`bphase-${dayNum}`)?.value.trim() || `Day ${dayNum}`;
+    const distances = [];
+    dayEl.querySelectorAll('[id^="bdist-row-"]').forEach(row => {
+      const distId = row.id.split('-')[2];
+      const ft = parseInt(document.getElementById(`bft-${distId}`)?.value);
+      const reps = parseInt(document.getElementById(`breps-${distId}`)?.value);
+      if (ft && reps) distances.push({ ft, reps });
+    });
+    if (distances.length > 0) program.push({ day: dayNum, phase, distances });
+  });
+
+  if (program.length === 0) { showToast('Add at least one day with distances', false); return; }
+
+  localStorage.setItem('armforge_program', JSON.stringify(program));
+  localStorage.setItem('armforge_program_name', name);
+  document.getElementById('current-program-badge').textContent = name;
+  showToast(`Saved: ${name}`, true);
+  loadDashboard();
+  hideProgramBuilder();
+  closeProgramModal();
 }
 
 function closeProgramModal(e) {
