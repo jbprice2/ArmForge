@@ -829,6 +829,7 @@ document.addEventListener('click', function(e) {
   const btn = e.target.closest('.schedule-bullpen-btn');
   if (btn) {
     e.stopPropagation();
+    alert('button clicked: ' + btn.dataset.playerId);
     openBullpenModal(btn.dataset.playerId, btn.dataset.playerName);
   }
 });
