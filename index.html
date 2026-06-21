@@ -975,7 +975,8 @@ async function createTeam() {
   await db.from('team_members').insert({
     team_id: team.id,
     user_id: currentUser.id,
-    role: 'coach'
+    role: 'coach',
+    name: currentUser.user_metadata?.name || 'Coach'
   });
 
   showToast('Team created!', true);
@@ -992,7 +993,8 @@ async function joinTeam() {
   const { error: joinError } = await db.from('team_members').insert({
     team_id: team.id,
     user_id: currentUser.id,
-    role: 'player'
+    role: 'player',
+    name: currentUser.user_metadata?.name || 'Player'
   });
 
   if (joinError) { showToast('Already on this team', false); return; }
@@ -1037,11 +1039,8 @@ async function loadTeam() {
 
   const { data: members } = await db
     .from('team_members')
-    .select('role, user_id')
+    .select('role, user_id, name')
     .eq('team_id', team.id);
-
-  const { data: profiles } = await db.from('profiles').select('id, name').in('id', members.map(m => m.user_id));
-  const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p.name]));
 
   const rosterEl = document.getElementById('team-roster');
   if (!members || members.length === 0) {
@@ -1050,7 +1049,7 @@ async function loadTeam() {
   }
 
   rosterEl.innerHTML = members.map(m => {
-    const name = profileMap[m.user_id] || 'Unknown';
+    const name = m.name || 'Unknown';
     const isYou = m.user_id === currentUser.id;
     return `
       <div class="member-item">
